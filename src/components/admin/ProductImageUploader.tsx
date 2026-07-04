@@ -8,6 +8,7 @@
 // ============================================================
 import { useCallback, useRef, useState } from "react";
 import { Camera, ImagePlus, X, GripVertical, Loader2 } from "lucide-react";
+import { resizeImageForUpload } from "@/lib/clientImages";
 
 type Img = { id?: string; url: string; uploading?: boolean };
 
@@ -21,6 +22,7 @@ export function ProductImageUploader({
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const full = images.length >= 4;
 
   const upload = useCallback(async (files: FileList | File[]) => {
@@ -28,19 +30,26 @@ export function ProductImageUploader({
     const batch = Array.from(files).slice(0, room);
     if (!batch.length) return;
 
-    // optimistic previews
+    setError(null);
     const previews: Img[] = batch.map((f) => ({ url: URL.createObjectURL(f), uploading: true }));
     onChange([...images, ...previews]);
 
     const uploaded: Img[] = [];
-    for (const file of batch) {
-      const form = new FormData();
-      form.append("file", file);
-      const res = await fetch("/api/admin/upload", { method: "POST", body: form });
-      const { url, id } = await res.json();
-      uploaded.push({ id, url });
+    try {
+      for (const file of batch) {
+        const uploadFile = await resizeImageForUpload(file);
+        const form = new FormData();
+        form.append("file", uploadFile);
+        const res = await fetch("/api/admin/upload", { method: "POST", body: form });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "upload failed");
+        uploaded.push({ id: data.id, url: data.url });
+      }
+      onChange([...images, ...uploaded]);
+    } catch {
+      setError("Upload failed. Try a smaller image. / No se pudo subir.");
+      onChange(images);
     }
-    onChange([...images, ...uploaded]);
   }, [images, onChange]);
 
   return (
@@ -112,6 +121,7 @@ export function ProductImageUploader({
       {/* capture="environment" = rear camera opens directly on mobile */}
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden
         onChange={(e) => e.target.files && upload(e.target.files)} />
+      {error && <p className="text-sm text-torch-400">{error}</p>}
     </div>
   );
 }
