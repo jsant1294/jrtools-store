@@ -28,7 +28,7 @@ export async function POST(req: Request) {
         if (!pathname.startsWith(`${folder}/`)) throw new Error("invalid upload path");
 
         return {
-          allowedContentTypes: ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"],
+          allowedContentTypes: ["image/jpeg", "image/png", "image/webp"],
           maximumSizeInBytes: 30 * 1024 * 1024,
           addRandomSuffix: true,
           tokenPayload: JSON.stringify({ folder }),

@@ -45,11 +45,30 @@ function canvasToBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob>
   });
 }
 
-export async function resizeImageForUpload(file: File) {
-  if (!file.type.startsWith("image/")) return file;
-  if (file.size <= TARGET_BYTES && file.type === "image/jpeg") return file;
+function isHeic(file: File) {
+  return file.type === "image/heic" || file.type === "image/heif" || /\.hei[cf]$/i.test(file.name);
+}
 
-  const img = await loadImage(file);
+// Chrome/Firefox/Edge can't decode HEIC via <img>/Image() — only Safari can.
+// iPhone photos saved from the camera roll (as opposed to taken live) often
+// come through as HEIC, so convert to JPEG here or they render as broken
+// images for anyone not on Safari.
+async function convertHeicToJpeg(file: File): Promise<File> {
+  const { default: heic2any } = await import("heic2any");
+  const result = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
+  const blob = Array.isArray(result) ? result[0] : result;
+  const name = file.name.replace(/\.[^.]+$/, "") || "image";
+  return new File([blob], `${name}.jpg`, { type: "image/jpeg" });
+}
+
+export async function resizeImageForUpload(file: File) {
+  if (!file.type.startsWith("image/") && !isHeic(file)) return file;
+
+  const converted = isHeic(file);
+  const source = converted ? await convertHeicToJpeg(file) : file;
+  if (!converted && source.size <= TARGET_BYTES && source.type === "image/jpeg") return source;
+
+  const img = await loadImage(source);
   const scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(img.width, img.height));
   const width = Math.max(1, Math.round(img.width * scale));
   const height = Math.max(1, Math.round(img.height * scale));
@@ -58,7 +77,7 @@ export async function resizeImageForUpload(file: File) {
   canvas.height = height;
 
   const ctx = canvas.getContext("2d");
-  if (!ctx) return file;
+  if (!ctx) return source;
   ctx.drawImage(img, 0, 0, width, height);
 
   let quality = 0.84;
@@ -68,7 +87,7 @@ export async function resizeImageForUpload(file: File) {
     blob = await canvasToBlob(canvas, quality);
   }
 
-  const name = file.name.replace(/\.[^.]+$/, "") || "image";
+  const name = source.name.replace(/\.[^.]+$/, "") || "image";
   return new File([blob], `${name}.jpg`, { type: "image/jpeg" });
 }
 
@@ -84,8 +103,18 @@ function safeFileName(name: string) {
 export async function uploadAdminImage(file: File, folder: "hero" | "features" | "products") {
   let uploadFile = file;
   try {
-    uploadFile = await withTimeout(resizeImageForUpload(file), 14_000, "image preparation timed out");
-  } catch {
+    uploadFile = await withTimeout(
+      resizeImageForUpload(file),
+      isHeic(file) ? 20_000 : 14_000,
+      "image preparation timed out",
+    );
+  } catch (err) {
+    // HEIC can't render in Chrome/Firefox/Edge — never fall back to the raw
+    // file for those, or the "upload" silently succeeds with a broken image.
+    if (isHeic(file)) {
+      const message = err instanceof Error ? err.message : "conversion failed";
+      throw new Error(`Couldn't convert this iPhone photo (HEIC): ${message}. Try "Take Photo" instead, or switch the iPhone camera format to Most Compatible.`);
+    }
     uploadFile = file;
   }
 
@@ -101,9 +130,7 @@ export async function uploadAdminImage(file: File, folder: "hero" | "features" |
     ? "png"
     : uploadFile.type === "image/webp"
       ? "webp"
-      : uploadFile.type === "image/heic" || uploadFile.type === "image/heif"
-        ? "heic"
-        : "jpg";
+      : "jpg";
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
