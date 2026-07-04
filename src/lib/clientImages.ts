@@ -2,6 +2,7 @@ import { upload as uploadBlob } from "@vercel/blob/client";
 
 const MAX_IMAGE_SIDE = 1600;
 const TARGET_BYTES = 900 * 1024;
+const SERVER_FALLBACK_LIMIT = 3.5 * 1024 * 1024;
 
 function loadImage(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -85,11 +86,22 @@ export async function uploadAdminImage(file: File, folder: "hero" | "features" |
     uploadFile,
     {
       access: "public",
+      contentType: uploadFile.type || "image/jpeg",
       handleUploadUrl: "/api/admin/client-upload",
       clientPayload: JSON.stringify({ folder }),
       multipart: uploadFile.size > 4 * 1024 * 1024,
     },
-  );
+  ).catch(async (directError) => {
+    if (uploadFile.size > SERVER_FALLBACK_LIMIT) throw directError;
+
+    const form = new FormData();
+    form.append("file", uploadFile);
+    form.append("folder", folder);
+    const res = await fetch("/api/admin/upload", { method: "POST", body: form });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error ?? "upload failed");
+    return { pathname: data.id as string, url: data.url as string };
+  });
 
   return { id: blob.pathname, url: blob.url };
 }

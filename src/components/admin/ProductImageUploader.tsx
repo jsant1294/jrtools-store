@@ -40,8 +40,9 @@ export function ProductImageUploader({
         uploaded.push(await uploadAdminImage(file, "products"));
       }
       onChange([...images, ...uploaded]);
-    } catch {
-      setError("Upload failed. Try a smaller image. / No se pudo subir.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "No se pudo subir";
+      setError(`Upload failed: ${message}`);
       onChange(images);
     }
   }, [images, onChange]);
