@@ -3,16 +3,32 @@ import { upload as uploadBlob } from "@vercel/blob/client";
 const MAX_IMAGE_SIDE = 1600;
 const TARGET_BYTES = 900 * 1024;
 const SERVER_FALLBACK_LIMIT = 3.5 * 1024 * 1024;
+const DECODE_TIMEOUT_MS = 10_000;
+const UPLOAD_TIMEOUT_MS = 30_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string) {
+  let timeout: ReturnType<typeof setTimeout>;
+  const timer = new Promise<never>((_, reject) => {
+    timeout = setTimeout(() => reject(new Error(message)), ms);
+  });
+  return Promise.race([promise, timer]).finally(() => clearTimeout(timeout));
+}
 
 function loadImage(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
+    const timeout = setTimeout(() => {
+      URL.revokeObjectURL(url);
+      reject(new Error("image decode timed out"));
+    }, DECODE_TIMEOUT_MS);
     const img = new Image();
     img.onload = () => {
+      clearTimeout(timeout);
       URL.revokeObjectURL(url);
       resolve(img);
     };
     img.onerror = () => {
+      clearTimeout(timeout);
       URL.revokeObjectURL(url);
       reject(new Error("image load failed"));
     };
@@ -68,9 +84,17 @@ function safeFileName(name: string) {
 export async function uploadAdminImage(file: File, folder: "hero" | "features" | "products") {
   let uploadFile = file;
   try {
-    uploadFile = await resizeImageForUpload(file);
+    uploadFile = await withTimeout(resizeImageForUpload(file), 14_000, "image preparation timed out");
   } catch {
     uploadFile = file;
+  }
+
+  if (uploadFile.size <= SERVER_FALLBACK_LIMIT) {
+    try {
+      return await uploadViaServer(uploadFile, folder);
+    } catch {
+      // Direct Blob upload remains as backup for temporary server route failures.
+    }
   }
 
   const extension = uploadFile.type === "image/png"
@@ -81,6 +105,8 @@ export async function uploadAdminImage(file: File, folder: "hero" | "features" |
         ? "heic"
         : "jpg";
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
   const blob = await uploadBlob(
     `${folder}/${Date.now()}-${safeFileName(uploadFile.name)}.${extension}`,
     uploadFile,
@@ -90,18 +116,34 @@ export async function uploadAdminImage(file: File, folder: "hero" | "features" |
       handleUploadUrl: "/api/admin/client-upload",
       clientPayload: JSON.stringify({ folder }),
       multipart: uploadFile.size > 4 * 1024 * 1024,
+      abortSignal: controller.signal,
     },
-  ).catch(async (directError) => {
+  ).finally(() => clearTimeout(timeout)).catch(async (directError) => {
     if (uploadFile.size > SERVER_FALLBACK_LIMIT) throw directError;
 
-    const form = new FormData();
-    form.append("file", uploadFile);
-    form.append("folder", folder);
-    const res = await fetch("/api/admin/upload", { method: "POST", body: form });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error ?? "upload failed");
-    return { pathname: data.id as string, url: data.url as string };
+    const fallback = await uploadViaServer(uploadFile, folder);
+    return { pathname: fallback.id, url: fallback.url };
   });
 
   return { id: blob.pathname, url: blob.url };
+}
+
+async function uploadViaServer(file: File, folder: "hero" | "features" | "products") {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
+  try {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("folder", folder);
+    const res = await fetch("/api/admin/upload", {
+      method: "POST",
+      body: form,
+      signal: controller.signal,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error ?? "upload failed");
+    return { id: data.id as string, url: data.url as string };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
