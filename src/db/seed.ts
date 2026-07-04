@@ -3,6 +3,7 @@
 // inventory lands. Images use Unsplash tool photos as placeholders.
 import { db } from "./index";
 import { brands, categories, products, productImages, faqs, settings } from "./schema";
+import { eq } from "drizzle-orm";
 
 const U = (id: string) => `https://images.unsplash.com/${id}?w=800&q=80`;
 
@@ -15,21 +16,24 @@ type SampleProduct = {
 };
 
 async function main() {
-  const brandRows = await db.insert(brands).values([
+  await db.insert(brands).values([
     { name: "Milwaukee", slug: "milwaukee", sortOrder: 1 },
     { name: "DeWalt", slug: "dewalt", sortOrder: 2 },
     { name: "Makita", slug: "makita", sortOrder: 3 },
     { name: "Bosch", slug: "bosch", sortOrder: 4 },
     { name: "Ryobi", slug: "ryobi", sortOrder: 5 },
-  ]).returning();
+  ]).onConflictDoNothing();
 
-  const catRows = await db.insert(categories).values([
+  await db.insert(categories).values([
     { nameEn: "Drills & Drivers", nameEs: "Taladros y Atornilladores", slug: "drills", icon: "Drill", sortOrder: 1 },
     { nameEn: "Saws", nameEs: "Sierras", slug: "saws", icon: "Axe", sortOrder: 2 },
     { nameEn: "Batteries & Chargers", nameEs: "Baterías y Cargadores", slug: "batteries", icon: "BatteryCharging", sortOrder: 3 },
     { nameEn: "Hand Tools", nameEs: "Herramienta Manual", slug: "hand-tools", icon: "Hammer", sortOrder: 4 },
     { nameEn: "Accessories", nameEs: "Accesorios", slug: "accessories", icon: "Wrench", sortOrder: 5 },
-  ]).returning();
+  ]).onConflictDoNothing();
+
+  const brandRows = await db.select().from(brands);
+  const catRows = await db.select().from(categories);
 
   const b = Object.fromEntries(brandRows.map((r) => [r.slug, r.id]));
   const c = Object.fromEntries(catRows.map((r) => [r.slug, r.id]));
@@ -55,7 +59,7 @@ async function main() {
   ];
 
   for (const s of sample) {
-    const [p] = await db.insert(products).values({
+    let [p] = await db.insert(products).values({
       sku: s.sku, slug: s.slug, nameEn: s.nameEn, nameEs: s.nameEs,
       descriptionEn: "Pro-grade tool in excellent condition. Message us on WhatsApp for questions or bundle deals.",
       descriptionEs: "Herramienta profesional en excelente condición. Escríbenos por WhatsApp para preguntas o paquetes.",
@@ -64,21 +68,31 @@ async function main() {
       stockStatus: s.pickupOnly ? "pickup_only" : "in_stock",
       quantity: s.qty, allowShipping: !s.pickupOnly,
       specs: s.specs, condition: "new",
-    }).returning();
+    }).onConflictDoNothing().returning();
 
-    await db.insert(productImages).values(photoIds.map((pid, i) => ({
-      productId: p.id, url: U(pid), position: i, source: "unsplash",
-      altEn: s.nameEn, altEs: s.nameEs,
-    })));
+    if (!p) {
+      [p] = await db.select().from(products).where(eq(products.sku, s.sku));
+    }
+
+    const existingImages = await db.select({ id: productImages.id }).from(productImages).where(eq(productImages.productId, p.id));
+    if (existingImages.length === 0) {
+      await db.insert(productImages).values(photoIds.map((pid, i) => ({
+        productId: p.id, url: U(pid), position: i, source: "unsplash",
+        altEn: s.nameEn, altEs: s.nameEs,
+      })));
+    }
   }
 
-  await db.insert(faqs).values([
-    { questionEn: "Where do I pick up my order?", questionEs: "¿Dónde recojo mi pedido?", answerEn: "Local pickup is in Alpharetta, GA. After you order, we confirm the exact address and pickup window by WhatsApp.", answerEs: "La recogida es en Alpharetta, GA. Después de tu pedido, te confirmamos la dirección exacta y el horario por WhatsApp.", keywords: "pickup,recoger,address,direccion,location,donde", sortOrder: 1 },
-    { questionEn: "How do I pay with Zelle?", questionEs: "¿Cómo pago con Zelle?", answerEn: "Place your order and choose Zelle. We send payment details by WhatsApp; your order ships or is held for pickup once payment lands.", answerEs: "Haz tu pedido y elige Zelle. Te enviamos los datos por WhatsApp; tu pedido se envía o se aparta al recibir el pago.", keywords: "zelle,pay,pago,payment,transfer", sortOrder: 2 },
-    { questionEn: "Are the tools new?", questionEs: "¿Las herramientas son nuevas?", answerEn: "Every listing shows its condition: New, Open Box, Refurbished, or Used. What you see on the tag is what you get.", answerEs: "Cada producto muestra su condición: Nueva, Caja Abierta, Reacondicionada o Usada. Lo que dice la etiqueta es lo que recibes.", keywords: "new,nueva,condition,condicion,used,usada,open box", sortOrder: 3 },
-    { questionEn: "Do you ship?", questionEs: "¿Hacen envíos?", answerEn: "Yes — flat $15 shipping nationwide on most items. Some heavy or pickup-only items are marked on the product page.", answerEs: "Sí — envío fijo de $15 a todo el país en la mayoría de artículos. Algunos artículos pesados son solo recogida y están marcados.", keywords: "ship,envio,shipping,delivery,entrega", sortOrder: 4 },
-    { questionEn: "Can I return a tool?", questionEs: "¿Puedo devolver una herramienta?", answerEn: "7-day return window on unused tools in original packaging. Message us on WhatsApp to start a return.", answerEs: "7 días para devoluciones en herramientas sin usar y en su empaque original. Escríbenos por WhatsApp para iniciarla.", keywords: "return,devolver,devolucion,refund,reembolso,warranty,garantia", sortOrder: 5 },
-  ]);
+  const existingFaqs = await db.select({ id: faqs.id }).from(faqs);
+  if (existingFaqs.length === 0) {
+    await db.insert(faqs).values([
+      { questionEn: "Where do I pick up my order?", questionEs: "¿Dónde recojo mi pedido?", answerEn: "Local pickup is in Alpharetta, GA. After you order, we confirm the exact address and pickup window by WhatsApp.", answerEs: "La recogida es en Alpharetta, GA. Después de tu pedido, te confirmamos la dirección exacta y el horario por WhatsApp.", keywords: "pickup,recoger,address,direccion,location,donde", sortOrder: 1 },
+      { questionEn: "How do I pay with Zelle?", questionEs: "¿Cómo pago con Zelle?", answerEn: "Place your order and choose Zelle. We send payment details by WhatsApp; your order ships or is held for pickup once payment lands.", answerEs: "Haz tu pedido y elige Zelle. Te enviamos los datos por WhatsApp; tu pedido se envía o se aparta al recibir el pago.", keywords: "zelle,pay,pago,payment,transfer", sortOrder: 2 },
+      { questionEn: "Are the tools new?", questionEs: "¿Las herramientas son nuevas?", answerEn: "Every listing shows its condition: New, Open Box, Refurbished, or Used. What you see on the tag is what you get.", answerEs: "Cada producto muestra su condición: Nueva, Caja Abierta, Reacondicionada o Usada. Lo que dice la etiqueta es lo que recibes.", keywords: "new,nueva,condition,condicion,used,usada,open box", sortOrder: 3 },
+      { questionEn: "Do you ship?", questionEs: "¿Hacen envíos?", answerEn: "Yes - flat $15 shipping nationwide on most items. Some heavy or pickup-only items are marked on the product page.", answerEs: "Si - envio fijo de $15 a todo el pais en la mayoria de articulos. Algunos articulos pesados son solo recogida y estan marcados.", keywords: "ship,envio,shipping,delivery,entrega", sortOrder: 4 },
+      { questionEn: "Can I return a tool?", questionEs: "¿Puedo devolver una herramienta?", answerEn: "7-day return window on unused tools in original packaging. Message us on WhatsApp to start a return.", answerEs: "7 dias para devoluciones en herramientas sin usar y en su empaque original. Escribenos por WhatsApp para iniciarla.", keywords: "return,devolver,devolucion,refund,reembolso,warranty,garantia", sortOrder: 5 },
+    ]);
+  }
 
   await db.insert(settings).values([
     { key: "hero_image_url", value: { url: null } }, // null = Unsplash default; admin sets real photo
