@@ -100,7 +100,7 @@ function safeFileName(name: string) {
     .slice(0, 48) || "image";
 }
 
-export async function uploadAdminImage(file: File, folder: "hero" | "features" | "products") {
+export async function uploadAdminImage(file: File, folder: "hero" | "features" | "products" | "branding") {
   let uploadFile = file;
   try {
     uploadFile = await withTimeout(
@@ -155,7 +155,7 @@ export async function uploadAdminImage(file: File, folder: "hero" | "features" |
   return { id: blob.pathname, url: blob.url };
 }
 
-async function uploadViaServer(file: File, folder: "hero" | "features" | "products") {
+async function uploadViaServer(file: File, folder: "hero" | "features" | "products" | "branding") {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
   try {

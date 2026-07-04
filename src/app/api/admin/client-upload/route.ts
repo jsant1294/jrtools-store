@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { isAdmin } from "@/lib/adminAuth";
 
-const folders = new Set(["hero", "features", "products"]);
+const folders = new Set(["hero", "features", "products", "branding"]);
 
 function parsePayload(payload: string | null) {
   if (!payload) return { folder: "products" };

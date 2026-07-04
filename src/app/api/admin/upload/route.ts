@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   const form = await req.formData();
   const file = form.get("file") as File | null;
   const requestedFolder = form.get("folder");
-  const folder = requestedFolder === "hero" || requestedFolder === "features"
+  const folder = requestedFolder === "hero" || requestedFolder === "features" || requestedFolder === "branding"
     ? requestedFolder
     : "products";
   if (!file) return NextResponse.json({ error: "no file" }, { status: 400 });

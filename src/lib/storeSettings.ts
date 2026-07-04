@@ -27,6 +27,7 @@ export type StoreSettings = {
   themePreset: ThemePreset;
   fontPreset: FontPreset;
   heroImageUrl: string | null;
+  faviconUrl: string | null;
   hero: {
     en: LocalizedHero;
     es: LocalizedHero;
@@ -48,6 +49,7 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   themePreset: "torch",
   fontPreset: "industrial",
   heroImageUrl: null,
+  faviconUrl: null,
   hero: {
     en: {
       eyebrow: "PROFESSIONAL TOOL DEALS",
@@ -73,6 +75,7 @@ export async function getStoreSettings(): Promise<StoreSettings> {
   const rows = await db.select().from(settings).where(inArray(settings.key, [
     "store_profile",
     "hero_image_url",
+    "favicon_url",
   ]));
 
   const profile = rows.find((row) => row.key === "store_profile")?.value as {
@@ -83,6 +86,9 @@ export async function getStoreSettings(): Promise<StoreSettings> {
     toolFeatures?: Partial<ToolFeature>[];
   } | undefined;
   const hero = rows.find((row) => row.key === "hero_image_url")?.value as {
+    url?: string | null;
+  } | undefined;
+  const favicon = rows.find((row) => row.key === "favicon_url")?.value as {
     url?: string | null;
   } | undefined;
 
@@ -98,6 +104,7 @@ export async function getStoreSettings(): Promise<StoreSettings> {
     themePreset,
     fontPreset,
     heroImageUrl: hero?.url ?? DEFAULT_STORE_SETTINGS.heroImageUrl,
+    faviconUrl: favicon?.url ?? DEFAULT_STORE_SETTINGS.faviconUrl,
     hero: {
       en: { ...DEFAULT_STORE_SETTINGS.hero.en, ...(profile?.hero?.en ?? {}) },
       es: { ...DEFAULT_STORE_SETTINGS.hero.es, ...(profile?.hero?.es ?? {}) },

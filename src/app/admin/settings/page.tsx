@@ -56,12 +56,14 @@ const DEFAULT_TOOL_FEATURES = [
 export default function AdminSettings() {
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
+  const faviconRef = useRef<HTMLInputElement>(null);
   const [storeName, setStoreName] = useState("JR Tools USA");
   const [themePreset, setThemePreset] = useState<ThemeId>("torch");
   const [fontPreset, setFontPreset] = useState<FontId>("industrial");
   const [hero, setHero] = useState(DEFAULT_HERO_COPY);
   const [toolFeatures, setToolFeatures] = useState(DEFAULT_TOOL_FEATURES);
   const [heroImageUrl, setHeroImageUrl] = useState("");
+  const [faviconUrl, setFaviconUrl] = useState("");
   const [brands, setBrands] = useState<BrandRow[]>([]);
   const [newBrand, setNewBrand] = useState("");
   const [loading, setLoading] = useState(true);
@@ -87,6 +89,7 @@ export default function AdminSettings() {
         imageUrl: data.toolFeatures?.[i]?.imageUrl ?? "",
       })));
       setHeroImageUrl(data.heroImageUrl ?? "");
+      setFaviconUrl(data.faviconUrl ?? "");
       setBrands(await brandsRes.json());
       setLoading(false);
     });
@@ -125,7 +128,20 @@ export default function AdminSettings() {
     }
   }
 
-  async function uploadImage(file: File, folder: "hero" | "features") {
+  async function uploadFavicon(file: File | null) {
+    if (!file) return;
+    setUploading(true);
+    setErr(null);
+
+    try {
+      const url = await uploadImage(file, "branding");
+      if (url) setFaviconUrl(url);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function uploadImage(file: File, folder: "hero" | "features" | "branding") {
     try {
       const blob = await uploadAdminImage(file, folder);
       return blob.url;
@@ -151,6 +167,7 @@ export default function AdminSettings() {
         fontPreset,
         hero,
         heroImageUrl: clean || null,
+        faviconUrl: faviconUrl.trim() || null,
         toolFeatures: toolFeatures.map((feature) => ({
           ...feature,
           imageUrl: feature.imageUrl.trim() || null,
@@ -276,6 +293,39 @@ export default function AdminSettings() {
                 onChange={(e) => setHeroImageUrl(e.target.value)}
                 placeholder={DEFAULT_HERO}
               />
+            </div>
+
+            <div className="plate flex items-center gap-4 p-4">
+              <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded bg-forge-900">
+                {faviconUrl ? (
+                  <img src={faviconUrl} alt="" className="h-full w-full object-contain" />
+                ) : (
+                  <span className="stamped !text-steel-400">—</span>
+                )}
+              </div>
+              <div className="flex-1 space-y-1">
+                <p className="font-display text-base font-bold uppercase tracking-wide text-steel-100">
+                  Favicon / Icono del Sitio
+                </p>
+                <p className="text-xs text-steel-400">
+                  Browser tab icon for this store. Square image, 512x512 recommended. / Icono de pestaña. Imagen cuadrada, 512x512 recomendado.
+                </p>
+              </div>
+              <label className="plate flex cursor-pointer items-center gap-2 px-3 py-3 text-sm font-bold uppercase tracking-wide text-steel-100 hover:border-steel-400">
+                <ImagePlus className="h-4 w-4 text-steel-300" /> Upload / Subir
+                <input ref={faviconRef} type="file" accept="image/*" hidden
+                  onChange={(e) => uploadFavicon(e.target.files?.[0] ?? null)} />
+              </label>
+              {faviconUrl && (
+                <button
+                  type="button"
+                  onClick={() => setFaviconUrl("")}
+                  className="plate p-2 text-torch-400 hover:border-torch-500"
+                  aria-label="Clear favicon"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
             </div>
 
             <div className="plate space-y-3 p-4">

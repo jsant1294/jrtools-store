@@ -10,6 +10,11 @@ import "../globals.css";
 
 const DEFAULT_HERO = "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=1200&q=80";
 
+// Each tenant is its own Vercel project/domain, so this must never be
+// hardcoded to one tenant's URL — derive it from the deployment instead.
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL
+  ?? (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000");
+
 export async function generateMetadata({
   params,
 }: {
@@ -23,9 +28,10 @@ export async function generateMetadata({
   const image = store.heroImageUrl ?? DEFAULT_HERO;
 
   return {
-    metadataBase: new URL("https://jrtools-store-roan.vercel.app"),
+    metadataBase: new URL(SITE_URL),
     title,
     description,
+    ...(store.faviconUrl ? { icons: { icon: store.faviconUrl } } : {}),
     openGraph: {
       type: "website",
       locale,

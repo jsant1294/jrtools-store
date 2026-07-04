@@ -8,6 +8,7 @@ import { z } from "zod";
 
 const SettingsInput = z.object({
   heroImageUrl: z.string().url().nullable(),
+  faviconUrl: z.string().url().nullable(),
   storeName: z.string().min(2).max(80),
   themePreset: z.enum(THEME_PRESETS),
   fontPreset: z.enum(FONT_PRESETS),
@@ -53,6 +54,11 @@ export async function PATCH(req: Request) {
     {
       key: "hero_image_url",
       value: { url: parsed.data.heroImageUrl },
+      updatedAt,
+    },
+    {
+      key: "favicon_url",
+      value: { url: parsed.data.faviconUrl },
       updatedAt,
     },
     {
