@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+/* ============================================================
+   JR TOOLS USA — "Stamped Steel" Design System
+   Industrial gray + brushed steel + tool-red. No third-party trade dress —
+   the palette carries the Milwaukee energy, the identity is JR's own.
+   ============================================================ */
+
+@theme {
+  /* Base metals */
+  --color-forge-900: #141619;   /* page background — cold iron */
+  --color-forge-800: #1a1d21;   /* card surfaces */
+  --color-forge-700: #23272c;   /* raised surfaces, modals */
+  --color-forge-600: #2e333a;   /* borders, dividers */
+
+  /* Steel */
+  --color-steel-400: #8b939c;   /* muted text, stamped labels */
+  --color-steel-300: #b8bec4;   /* secondary text */
+  --color-steel-100: #eceef0;   /* primary text on dark */
+
+  /* Tool red — CTAs, prices, energy */
+  --color-torch-600: #b31217;   /* pressed / hover-dark */
+  --color-torch-500: #db1f26;   /* primary action */
+  --color-torch-400: #ef3b41;   /* hover-bright, sale badges */
+
+  /* Utility */
+  --color-caution-400: #f5b301; /* low-stock warnings — caution-tape yellow */
+  --color-confirm-500: #2e9e5b; /* in-stock, order confirmed */
+
+  /* Type */
+  --font-display: "Saira Condensed", "Arial Narrow", sans-serif; /* stamped part-number headings */
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace; /* SKUs, prices — machine-readout feel */
+}
+
+body[data-theme="cobalt"] {
+  --color-forge-900: #10151c;
+  --color-forge-800: #17202a;
+  --color-forge-700: #1f2a36;
+  --color-forge-600: #314052;
+  --color-torch-600: #155e9e;
+  --color-torch-500: #2383d1;
+  --color-torch-400: #4ba3e8;
+  --color-caution-400: #f4c542;
+  --color-confirm-500: #34a876;
+}
+
+body[data-theme="forest"] {
+  --color-forge-900: #111815;
+  --color-forge-800: #18221e;
+  --color-forge-700: #21302a;
+  --color-forge-600: #34493f;
+  --color-torch-600: #1f6f4a;
+  --color-torch-500: #2f9b68;
+  --color-torch-400: #4fc084;
+  --color-caution-400: #e1b84a;
+  --color-confirm-500: #38a169;
+}
+
+body[data-theme="gold"] {
+  --color-forge-900: #171512;
+  --color-forge-800: #211e19;
+  --color-forge-700: #302b22;
+  --color-forge-600: #4a4031;
+  --color-torch-600: #a46c07;
+  --color-torch-500: #d99512;
+  --color-torch-400: #f0b33a;
+  --color-caution-400: #f2cc59;
+  --color-confirm-500: #3c9f6f;
+}
+
+body[data-theme="graphite"] {
+  --color-forge-900: #111214;
+  --color-forge-800: #1b1d20;
+  --color-forge-700: #282b2f;
+  --color-forge-600: #444950;
+  --color-torch-600: #5d6673;
+  --color-torch-500: #8792a1;
+  --color-torch-400: #aeb7c4;
+  --color-caution-400: #e0b84f;
+  --color-confirm-500: #36a36f;
+}
+
+body[data-font="compact"] {
+  --font-display: Impact, Haettenschweiler, "Arial Narrow", sans-serif;
+  --font-body: Arial, Helvetica, sans-serif;
+}
+
+body[data-font="editorial"] {
+  --font-display: Georgia, "Times New Roman", serif;
+  --font-body: "Trebuchet MS", Arial, sans-serif;
+}
+
+body[data-font="classic"] {
+  --font-display: Verdana, Geneva, sans-serif;
+  --font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Stamped-metal card edge: subtle top bevel + inset shadow, like a pressed plate */
+.plate {
+  background: linear-gradient(180deg, var(--color-forge-700), var(--color-forge-800));
+  border: 1px solid var(--color-forge-600);
+  border-top-color: #3a4048;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 2px 8px rgba(0,0,0,0.4);
+  border-radius: 6px;
+}
+
+/* Diamond-plate texture — hero and section headers only. One signature, used with restraint. */
+.diamond-plate {
+  background-image:
+    linear-gradient(135deg, rgba(255,255,255,0.025) 25%, transparent 25%),
+    linear-gradient(225deg, rgba(255,255,255,0.025) 25%, transparent 25%),
+    linear-gradient(45deg, rgba(0,0,0,0.15) 25%, transparent 25%),
+    linear-gradient(315deg, rgba(0,0,0,0.15) 25%, transparent 25%);
+  background-size: 24px 24px;
+}
+
+/* Stamped SKU label — like a part number punched into steel */
+.stamped {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-steel-400);
+  text-shadow: 0 1px 0 rgba(0,0,0,0.6);
+}
+
+/* Primary CTA — the "buy now" energy */
+.btn-torch {
+  background: var(--color-torch-500);
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  transition: background 120ms ease, transform 80ms ease;
+}
+.btn-torch:hover { background: var(--color-torch-400); }
+.btn-torch:active { background: var(--color-torch-600); transform: translateY(1px); }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

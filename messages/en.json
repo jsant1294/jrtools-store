@@ -1,0 +1,9 @@
+{
+  "nav": { "shop": "Shop Tools", "deals": "Deals", "contact": "Contact", "cart": "Cart", "search": "Search tools, brands, part numbers..." },
+  "hero": { "eyebrow": "PROFESSIONAL TOOL DEALS", "title": "Built to Work.\nPriced to Move.", "sub": "Pro-grade tools from the brands you trust — new, open box, and smart finds. Pick up local or we ship it.", "cta": "Shop the Inventory", "pickup": "Local pickup — Alpharetta, GA", "shipping": "Fast shipping nationwide" },
+  "catalog": { "all": "All Tools", "filterBrand": "Brand", "filterType": "Tool Type", "inStock": "In Stock", "pickupOnly": "Pickup Only", "outOfStock": "Sold Out", "lowStock": "Only {n} left", "noResults": "No tools match. Try a different brand or type.", "condition": { "new": "New", "open_box": "Open Box", "refurbished": "Refurbished", "used": "Used" } },
+  "modal": { "alsoBought": "Customers who bought this also purchased", "addToCart": "Add to Cart", "buyNow": "Buy Now", "sku": "Part No.", "specs": "Specifications" },
+  "cart": { "title": "Your Cart", "empty": "Your cart is empty. The tools are waiting.", "subtotal": "Subtotal", "checkout": "Checkout", "fulfillment": "How do you want it?", "pickup": "Local Pickup — Free", "shipping": "Ship It", "remove": "Remove" },
+  "checkout": { "payment": "Payment Method", "zelle": "Zelle", "cashApp": "Cash App", "cashPickup": "Cash at Pickup", "paypal": "PayPal", "card": "Card (Stripe)", "manualNote": "We'll confirm your order by WhatsApp with payment details.", "placeOrder": "Place Order", "startOver": "Start Over", "confirmed": "Order placed! Check WhatsApp for confirmation." },
+  "assistant": { "title": "Ask JR Tools", "placeholder": "Ask about tools, pickup, warranty...", "greeting": "What can I help you find today? Drills, saws, deals — ask me anything." }
+}
