@@ -10,10 +10,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "locked" }, { status: 429 });
 
   const { pin } = await req.json();
-  if (verifyPin(String(pin ?? ""))) {
+  const role = verifyPin(String(pin ?? ""));
+  if (role) {
     attempts.delete(ip);
-    await createSession();
-    return NextResponse.json({ ok: true });
+    await createSession(role);
+    return NextResponse.json({ ok: true, role });
   }
   const cur = a && Date.now() < a.reset ? a : { n: 0, reset: Date.now() + 10 * 60_000 };
   attempts.set(ip, { n: cur.n + 1, reset: cur.reset });

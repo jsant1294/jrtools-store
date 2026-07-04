@@ -67,6 +67,7 @@ export default function AdminSettings() {
   const [brands, setBrands] = useState<BrandRow[]>([]);
   const [newBrand, setNewBrand] = useState("");
   const [loading, setLoading] = useState(true);
+  const [forbidden, setForbidden] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -75,6 +76,7 @@ export default function AdminSettings() {
   useEffect(() => {
     Promise.all([fetch("/api/admin/settings"), fetch("/api/admin/brands")]).then(async ([settingsRes, brandsRes]) => {
       if (settingsRes.status === 401 || brandsRes.status === 401) { window.location.href = "/admin"; return; }
+      if (settingsRes.status === 403 || brandsRes.status === 403) { setForbidden(true); setLoading(false); return; }
       const data = await settingsRes.json();
       setStoreName(data.storeName ?? "JR Tools USA");
       setThemePreset(data.themePreset ?? "torch");
@@ -218,6 +220,18 @@ export default function AdminSettings() {
   }
 
   if (loading) return <div className="grid min-h-screen place-items-center text-steel-400">Loading...</div>;
+
+  if (forbidden) return (
+    <>
+      <AdminNav />
+      <main className="mx-auto max-w-md px-4 py-24 text-center">
+        <p className="stamped mb-2 !text-torch-400">Master Admin Only</p>
+        <p className="text-steel-300">
+          Ask the master admin to update store settings. / Pide al administrador principal que actualice esta configuración.
+        </p>
+      </main>
+    </>
+  );
 
   const previewUrl = heroImageUrl.trim() || DEFAULT_HERO;
 

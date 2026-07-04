@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { brands, products } from "@/db/schema";
-import { isAdmin } from "@/lib/adminAuth";
+import { getAdminRole } from "@/lib/adminAuth";
 import { asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
@@ -14,7 +14,9 @@ const slugify = (value: string) =>
   value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
 export async function GET() {
-  if (!(await isAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const role = await getAdminRole();
+  if (!role) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (role !== "master") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const [rows, productRows] = await Promise.all([
     db.select().from(brands).orderBy(asc(brands.sortOrder), asc(brands.name)),
@@ -32,7 +34,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  if (!(await isAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const role = await getAdminRole();
+  if (!role) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (role !== "master") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const parsed = BrandInput.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
@@ -47,7 +51,9 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  if (!(await isAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const role = await getAdminRole();
+  if (!role) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (role !== "master") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json();
   const parsed = z.array(z.object({
     id: z.string().uuid(),
@@ -68,7 +74,9 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  if (!(await isAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const role = await getAdminRole();
+  if (!role) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (role !== "master") return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const ids = new URL(req.url).searchParams.getAll("id");
   const parsed = z.array(z.string().uuid()).min(1).safeParse(ids);
   if (!parsed.success) return NextResponse.json({ error: "bad id" }, { status: 400 });

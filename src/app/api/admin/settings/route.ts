@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { settings } from "@/db/schema";
-import { isAdmin } from "@/lib/adminAuth";
+import { getAdminRole } from "@/lib/adminAuth";
 import { FONT_PRESETS, getStoreSettings, THEME_PRESETS } from "@/lib/storeSettings";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
@@ -38,13 +38,17 @@ const SettingsInput = z.object({
 });
 
 export async function GET() {
-  if (!(await isAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const role = await getAdminRole();
+  if (!role) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (role !== "master") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   return NextResponse.json(await getStoreSettings());
 }
 
 export async function PATCH(req: Request) {
-  if (!(await isAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const role = await getAdminRole();
+  if (!role) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (role !== "master") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const parsed = SettingsInput.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
