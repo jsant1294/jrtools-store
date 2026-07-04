@@ -1,5 +1,7 @@
-const MAX_IMAGE_SIDE = 1800;
-const TARGET_BYTES = 1.6 * 1024 * 1024;
+import { upload as uploadBlob } from "@vercel/blob/client";
+
+const MAX_IMAGE_SIDE = 1600;
+const TARGET_BYTES = 900 * 1024;
 
 function loadImage(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -51,4 +53,43 @@ export async function resizeImageForUpload(file: File) {
 
   const name = file.name.replace(/\.[^.]+$/, "") || "image";
   return new File([blob], `${name}.jpg`, { type: "image/jpeg" });
+}
+
+function safeFileName(name: string) {
+  return (name || "image")
+    .replace(/\.[^.]+$/, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48) || "image";
+}
+
+export async function uploadAdminImage(file: File, folder: "hero" | "features" | "products") {
+  let uploadFile = file;
+  try {
+    uploadFile = await resizeImageForUpload(file);
+  } catch {
+    uploadFile = file;
+  }
+
+  const extension = uploadFile.type === "image/png"
+    ? "png"
+    : uploadFile.type === "image/webp"
+      ? "webp"
+      : uploadFile.type === "image/heic" || uploadFile.type === "image/heif"
+        ? "heic"
+        : "jpg";
+
+  const blob = await uploadBlob(
+    `${folder}/${Date.now()}-${safeFileName(uploadFile.name)}.${extension}`,
+    uploadFile,
+    {
+      access: "public",
+      handleUploadUrl: "/api/admin/client-upload",
+      clientPayload: JSON.stringify({ folder }),
+      multipart: uploadFile.size > 4 * 1024 * 1024,
+    },
+  );
+
+  return { id: blob.pathname, url: blob.url };
 }

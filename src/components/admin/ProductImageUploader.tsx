@@ -8,7 +8,7 @@
 // ============================================================
 import { useCallback, useRef, useState } from "react";
 import { Camera, ImagePlus, X, GripVertical, Loader2 } from "lucide-react";
-import { resizeImageForUpload } from "@/lib/clientImages";
+import { uploadAdminImage } from "@/lib/clientImages";
 
 type Img = { id?: string; url: string; uploading?: boolean };
 
@@ -37,13 +37,7 @@ export function ProductImageUploader({
     const uploaded: Img[] = [];
     try {
       for (const file of batch) {
-        const uploadFile = await resizeImageForUpload(file);
-        const form = new FormData();
-        form.append("file", uploadFile);
-        const res = await fetch("/api/admin/upload", { method: "POST", body: form });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? "upload failed");
-        uploaded.push({ id: data.id, url: data.url });
+        uploaded.push(await uploadAdminImage(file, "products"));
       }
       onChange([...images, ...uploaded]);
     } catch {

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { Camera, ImagePlus, Loader2, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
-import { resizeImageForUpload } from "@/lib/clientImages";
+import { uploadAdminImage } from "@/lib/clientImages";
 
 const input = "plate w-full bg-transparent px-3 py-3 text-steel-100 placeholder-steel-400 outline-none focus:border-torch-500";
 const label = "stamped mb-1 block";
@@ -126,16 +126,14 @@ export default function AdminSettings() {
   }
 
   async function uploadImage(file: File, folder: "hero" | "features") {
-    const uploadFile = await resizeImageForUpload(file);
-    const form = new FormData();
-    form.append("file", uploadFile);
-    form.append("folder", folder);
-    const res = await fetch("/api/admin/upload", { method: "POST", body: form });
-    const data = await res.json();
-
-    if (res.ok) return data.url as string;
-    setErr(data.error ? `Upload failed: ${data.error}` : "Upload failed / No se pudo subir");
-    return null;
+    try {
+      const blob = await uploadAdminImage(file, folder);
+      return blob.url;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo subir";
+      setErr(`Upload failed: ${message}`);
+      return null;
+    }
   }
 
   async function save() {
