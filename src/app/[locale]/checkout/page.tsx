@@ -15,12 +15,13 @@ export default function CheckoutPage() {
   const locale = useLocale();
 
   const [fulfillment, setFulfillment] = useState<"pickup" | "shipping">("pickup");
-  const [payment, setPayment] = useState<"paypal" | "zelle" | "cash_app" | "cash_pickup">("zelle");
+  const [payment, setPayment] = useState<"stripe" | "paypal" | "zelle" | "cash_app" | "cash_pickup">("zelle");
   const [form, setForm] = useState({ name: "", phone: "", email: "", line1: "", city: "", state: "GA", zip: "" });
   const [placing, setPlacing] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [paypalEnabled, setPaypalEnabled] = useState(false);
+  const [stripeEnabled, setStripeEnabled] = useState(false);
 
   const shippingBlocked = cart.pickupLocked;
   const effFulfillment = shippingBlocked ? "pickup" : fulfillment;
@@ -31,6 +32,7 @@ export default function CheckoutPage() {
       if (!r.ok) return;
       const data = await r.json();
       setPaypalEnabled(!!data.paypalEnabled);
+      setStripeEnabled(!!data.stripeEnabled);
     });
   }, []);
 
@@ -71,6 +73,18 @@ export default function CheckoutPage() {
         const paypalData = await paypalRes.json();
         if (!paypalRes.ok) throw new Error(paypalData.error?.toString() ?? "PayPal failed");
         window.location.href = paypalData.url;
+        return;
+      }
+
+      if (payment === "stripe") {
+        const stripeRes = await fetch("/api/checkout/stripe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId: data.id }),
+        });
+        const stripeData = await stripeRes.json();
+        if (!stripeRes.ok) throw new Error(stripeData.error?.toString() ?? "Card payment failed");
+        window.location.href = stripeData.url;
         return;
       }
 
@@ -142,15 +156,17 @@ export default function CheckoutPage() {
 
           <p className="stamped pt-2">{tc("payment")}</p>
           <div className="grid gap-2">
-            <Toggle active={payment === "zelle"} onClick={() => setPayment("zelle")}>{tc("zelle")}</Toggle>
-            <Toggle active={payment === "cash_app"} onClick={() => setPayment("cash_app")}>{tc("cashApp")}</Toggle>
+            {stripeEnabled && (
+              <Toggle active={payment === "stripe"} onClick={() => setPayment("stripe")}>{tc("card")}</Toggle>
+            )}
             {paypalEnabled && (
               <Toggle active={payment === "paypal"} onClick={() => setPayment("paypal")}>{tc("paypal")}</Toggle>
             )}
+            <Toggle active={payment === "zelle"} onClick={() => setPayment("zelle")}>{tc("zelle")}</Toggle>
+            <Toggle active={payment === "cash_app"} onClick={() => setPayment("cash_app")}>{tc("cashApp")}</Toggle>
             {effFulfillment === "pickup" && (
               <Toggle active={payment === "cash_pickup"} onClick={() => setPayment("cash_pickup")}>{tc("cashPickup")}</Toggle>
             )}
-            {/* Stripe card option renders here when PAYMENTS_STRIPE_ENABLED=true — Phase 3 */}
           </div>
 
           <div className="space-y-2 pt-2">
