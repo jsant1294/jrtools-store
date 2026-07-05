@@ -1,12 +1,14 @@
 // Two-mode assistant:
 //   MODE A (default, free): deterministic FAQ + live product retrieval.
-//   MODE B (optional): ASSISTANT_AI_ENABLED=true + ANTHROPIC_API_KEY set lets
-//   Claude answer from the SAME faq table + live product list.
+//   MODE B (optional): the store's AI config (Admin > AI Assistant) resolves
+//   an API key — the owner's own, or the platform's shared "sandbox" key —
+//   and lets Claude answer from the SAME faq table + live product list.
 // The widget UI never changes between modes.
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { faqs, assistantLogs, products } from "@/db/schema";
 import { eq, ne } from "drizzle-orm";
+import { getAiConfig } from "@/lib/aiSettings";
 
 function norm(text: string) {
   return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -67,7 +69,8 @@ export async function POST(req: Request) {
     .slice(0, 3);
 
   // ---- MODE B: Claude salesman ----
-  if (process.env.ASSISTANT_AI_ENABLED === "true" && process.env.ANTHROPIC_API_KEY) {
+  const aiConfig = await getAiConfig();
+  if (aiConfig.enabled && aiConfig.apiKey) {
     const inStock = inv.filter((p) => p.stockStatus === "in_stock" || p.stockStatus === "pickup_only")
       .map((p) => `- ${es ? p.nameEs : p.nameEn}: $${(p.priceCents / 100).toFixed(2)}${p.stockStatus === "pickup_only" ? " (pickup only)" : ""}`)
       .slice(0, 100).join("\n");
@@ -77,7 +80,7 @@ export async function POST(req: Request) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        "x-api-key": aiConfig.apiKey,
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({

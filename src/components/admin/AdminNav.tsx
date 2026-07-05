@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Package, ClipboardList, Wrench, ExternalLink, Image, CreditCard } from "lucide-react";
+import { Package, ClipboardList, Wrench, ExternalLink, Image, CreditCard, Sparkles } from "lucide-react";
 
 export function AdminNav() {
   const path = usePathname();
@@ -31,6 +31,7 @@ export function AdminNav() {
         {tab("/admin/products", path.startsWith("/admin/products"), <Package className="h-4 w-4" />, "Products / Productos")}
         {tab("/admin/orders", path.startsWith("/admin/orders"), <ClipboardList className="h-4 w-4" />, "Orders / Pedidos")}
         {tab("/admin/payments", path.startsWith("/admin/payments"), <CreditCard className="h-4 w-4" />, "Payments / Pagos")}
+        {tab("/admin/ai", path.startsWith("/admin/ai"), <Sparkles className="h-4 w-4" />, "AI / IA")}
         {isMaster && tab("/admin/settings", path.startsWith("/admin/settings"), <Image className="h-4 w-4" />, "Settings / Ajustes")}
         <a href="/en" target="_blank" className="ml-auto flex items-center gap-1 text-xs text-steel-400 hover:text-steel-100">
           View store <ExternalLink className="h-3 w-3" />
