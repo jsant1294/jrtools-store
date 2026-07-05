@@ -1,7 +1,7 @@
 "use client";
 // Checkout — cart review, fulfillment selector, payment method, order placement.
 // Manual payments create pending_payment orders; the confirmation screen points
-// the customer to WhatsApp. Stripe branch activates via env flag in Phase 3.
+// the customer to WhatsApp. Stripe/PayPal are wired per-store from Admin Payments.
 import { useEffect, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useCart, fmt } from "@/lib/cart";
@@ -20,11 +20,19 @@ export default function CheckoutPage() {
   const [placing, setPlacing] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [paypalEnabled, setPaypalEnabled] = useState(false);
 
   const shippingBlocked = cart.pickupLocked;
   const effFulfillment = shippingBlocked ? "pickup" : fulfillment;
   const shippingCents = effFulfillment === "shipping" ? 1500 : 0;
-  const paypalEnabled = process.env.NEXT_PUBLIC_PAYMENTS_PAYPAL_ENABLED === "true";
+
+  useEffect(() => {
+    fetch("/api/payments/status").then(async (r) => {
+      if (!r.ok) return;
+      const data = await r.json();
+      setPaypalEnabled(!!data.paypalEnabled);
+    });
+  }, []);
 
   useEffect(() => {
     const paid = new URLSearchParams(window.location.search).get("paid");

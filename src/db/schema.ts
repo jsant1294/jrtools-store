@@ -27,7 +27,7 @@ export const orderStatusEnum = pgEnum("order_status", [
 ]);
 
 export const paymentMethodEnum = pgEnum("payment_method", [
-  "stripe",        // wired, enabled via env flag PAYMENTS_STRIPE_ENABLED
+  "stripe",        // wired, enabled/configured from Admin > Payments
   "zelle",
   "cash_app",
   "cash_pickup",

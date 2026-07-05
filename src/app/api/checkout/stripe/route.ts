@@ -1,17 +1,19 @@
-// Stripe Checkout — wired dark. Returns 503 until PAYMENTS_STRIPE_ENABLED=true.
-// When flipped: creates the order as pending_payment, opens a Stripe Checkout
-// Session, and the webhook marks it paid.
+// Stripe Checkout — creates the order as pending_payment, opens a Stripe
+// Checkout Session, and the webhook marks it paid. Credentials come from the
+// admin-configured Payments settings, not env vars.
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { getPaymentConfig } from "@/lib/paymentSettings";
 
 export async function POST(req: Request) {
-  if (process.env.PAYMENTS_STRIPE_ENABLED !== "true")
+  const { stripe: stripeConfig } = await getPaymentConfig();
+  if (!stripeConfig.enabled || !stripeConfig.secretKey)
     return NextResponse.json({ error: "card payments not enabled" }, { status: 503 });
 
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+  const stripe = new Stripe(stripeConfig.secretKey);
   const { orderId } = await req.json();
   const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
   if (!order || order.status !== "pending_payment")

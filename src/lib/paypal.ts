@@ -1,22 +1,16 @@
-const baseUrl = () =>
-  process.env.PAYPAL_ENV === "live"
-    ? "https://api-m.paypal.com"
-    : "https://api-m.sandbox.paypal.com";
+export type PayPalCredentials = {
+  clientId: string;
+  clientSecret: string;
+  env: "sandbox" | "live";
+};
 
-function requirePayPalEnv() {
-  const clientId = process.env.PAYPAL_CLIENT_ID;
-  const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
-  if (process.env.PAYMENTS_PAYPAL_ENABLED !== "true" || !clientId || !clientSecret) {
-    throw new Error("paypal not configured");
-  }
-  return { clientId, clientSecret };
-}
+const baseUrl = (env: "sandbox" | "live") =>
+  env === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com";
 
-async function accessToken() {
-  const { clientId, clientSecret } = requirePayPalEnv();
-  const auth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+async function accessToken(credentials: PayPalCredentials) {
+  const auth = Buffer.from(`${credentials.clientId}:${credentials.clientSecret}`).toString("base64");
 
-  const res = await fetch(`${baseUrl()}/v1/oauth2/token`, {
+  const res = await fetch(`${baseUrl(credentials.env)}/v1/oauth2/token`, {
     method: "POST",
     headers: {
       Authorization: `Basic ${auth}`,
@@ -32,22 +26,24 @@ async function accessToken() {
 }
 
 export async function createPayPalOrder({
+  credentials,
   orderId,
   orderNumber,
   totalCents,
   locale,
   origin,
 }: {
+  credentials: PayPalCredentials;
   orderId: string;
   orderNumber: string;
   totalCents: number;
   locale: string | null;
   origin: string;
 }) {
-  const token = await accessToken();
+  const token = await accessToken(credentials);
   const appLocale = locale || "en";
 
-  const res = await fetch(`${baseUrl()}/v2/checkout/orders`, {
+  const res = await fetch(`${baseUrl(credentials.env)}/v2/checkout/orders`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -90,9 +86,9 @@ export async function createPayPalOrder({
   return { paypalOrderId: data.id as string, approveUrl: approveUrl as string };
 }
 
-export async function capturePayPalOrder(paypalOrderId: string) {
-  const token = await accessToken();
-  const res = await fetch(`${baseUrl()}/v2/checkout/orders/${paypalOrderId}/capture`, {
+export async function capturePayPalOrder(credentials: PayPalCredentials, paypalOrderId: string) {
+  const token = await accessToken(credentials);
+  const res = await fetch(`${baseUrl(credentials.env)}/v2/checkout/orders/${paypalOrderId}/capture`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,

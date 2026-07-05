@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { capturePayPalOrder } from "@/lib/paypal";
+import { getPaymentConfig } from "@/lib/paymentSettings";
 import { eq } from "drizzle-orm";
 
 export async function GET(req: Request) {
@@ -18,8 +19,18 @@ export async function GET(req: Request) {
     return NextResponse.redirect(new URL("/en/checkout?paypal=failed", url.origin));
   }
 
+  const { paypal: paypalConfig } = await getPaymentConfig();
+  if (!paypalConfig.enabled || !paypalConfig.clientId || !paypalConfig.clientSecret) {
+    return NextResponse.redirect(
+      new URL(`/${order.locale ?? "en"}/checkout?paypal=failed`, url.origin),
+    );
+  }
+
   try {
-    const captured = await capturePayPalOrder(paypalOrderId);
+    const captured = await capturePayPalOrder(
+      { clientId: paypalConfig.clientId, clientSecret: paypalConfig.clientSecret, env: paypalConfig.env },
+      paypalOrderId,
+    );
     await db.update(orders).set({
       status: "paid",
       paypalOrderId,

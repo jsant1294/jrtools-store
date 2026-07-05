@@ -3,18 +3,20 @@ import Stripe from "stripe";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { getPaymentConfig } from "@/lib/paymentSettings";
 
 export async function POST(req: Request) {
-  if (process.env.PAYMENTS_STRIPE_ENABLED !== "true")
+  const { stripe: stripeConfig } = await getPaymentConfig();
+  if (!stripeConfig.enabled || !stripeConfig.secretKey || !stripeConfig.webhookSecret)
     return NextResponse.json({ ok: true }); // dark: acknowledge, do nothing
 
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+  const stripe = new Stripe(stripeConfig.secretKey);
   const sig = req.headers.get("stripe-signature")!;
   const raw = await req.text();
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(raw, sig, process.env.STRIPE_WEBHOOK_SECRET!);
+    event = stripe.webhooks.constructEvent(raw, sig, stripeConfig.webhookSecret);
   } catch {
     return NextResponse.json({ error: "bad signature" }, { status: 400 });
   }
