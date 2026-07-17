@@ -31,6 +31,10 @@ export async function POST(req: Request) {
           allowedContentTypes: ["image/jpeg", "image/png", "image/webp"],
           maximumSizeInBytes: 30 * 1024 * 1024,
           addRandomSuffix: true,
+          // See comment in /api/admin/upload — same reasoning, shorter cache
+          // so a broken mobile-network load self-heals instead of sticking
+          // for a year.
+          cacheControlMaxAge: 60 * 60 * 24,
           tokenPayload: JSON.stringify({ folder }),
         };
       },

@@ -14,6 +14,13 @@ export async function POST(req: Request) {
   if (!file.type.startsWith("image/")) return NextResponse.json({ error: "images only" }, { status: 415 });
   if (file.size > 8 * 1024 * 1024) return NextResponse.json({ error: "max 8MB" }, { status: 413 });
 
-  const blob = await put(`${folder}/${Date.now()}-${file.name}`, file, { access: "public" });
+  // Default Blob cache-control is 1 year — great for stable content, but on
+  // a spotty mobile connection an interrupted first load can get cached as
+  // "broken" for that whole year with no easy refresh out of it. A day is
+  // still a real cache, but self-heals fast if a photo failed to load once.
+  const blob = await put(`${folder}/${Date.now()}-${file.name}`, file, {
+    access: "public",
+    cacheControlMaxAge: 60 * 60 * 24,
+  });
   return NextResponse.json({ url: blob.url, id: blob.pathname });
 }
