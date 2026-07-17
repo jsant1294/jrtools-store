@@ -108,11 +108,11 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
                 href="#catalog"
                 className="plate group flex min-h-40 flex-col overflow-hidden transition hover:border-torch-500"
               >
-                <div className="grid h-28 place-items-center overflow-hidden bg-forge-900">
+                <div className="relative h-28 overflow-hidden bg-forge-900">
                   {feature.imageUrl ? (
-                    <img src={feature.imageUrl} alt="" className="h-full w-full object-cover transition group-hover:scale-105" />
+                    <img src={feature.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover transition group-hover:scale-105" />
                   ) : (
-                    <span className="stamped px-3 text-center !text-steel-400">
+                    <span className="stamped absolute inset-0 grid place-items-center px-3 text-center !text-steel-400">
                       {locale === "es" ? "Imagen" : "Image"}
                     </span>
                   )}
